@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="Episode Zhang">
+
+
+    <meta name="subtitle" content="世界之底的某处自留地">
+
+
+    <meta name="description" content="记录想记录的一切">
+
+
+
+
+
+<title>第一个小型项目的感想 | Episode Zhang&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/Episode_icon.png">
+
+
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono&display=swap');
+</style>
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/frame.js"></script>
+    
+
+
+
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+
+
+
+
+
+  <!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><meta name="generator" content="Hexo 6.2.0"></head>
+  <body>
+    <div class="mask-border">
+    </div>
+
+    <div class="wrapper">
+
+      <div class="header">
+  <div class="flex-container">
+    <div class="header-inner">
+      <div class="site-brand-container">
+        <a href="/">
+          
+            <img class="logo-img" src="/Episodes_logo.png" alt="logo_image">
+          
+        </a>
+      </div>
+      <div id="menu-btn" class="menu-btn" onclick="toggleMenu()">
+        Menu
+      </div>
+      <nav class="site-nav">
+        <ul class="menu-list">
+          
+            
+              <li class="menu-item">
+                <a href="/">Home</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/categories/blogs/">Blogs</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/archives/">Archive</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/tag/">Tag</a>
+              </li> 
+                   
+          
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main">
+        <div class="flex-container">
+          <article id="post">
+
+  
+    <div class="post-head">
+    <div class="post-info">
+        <div class="tag-list">
+            
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E6%9D%82%E6%96%87/">
+                            杂文
+                        </a>
+                    </span>    
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA/">
+                            计算机
+                        </a>
+                    </span>    
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E7%BB%8F%E9%AA%8C%E7%A2%8E%E7%A2%8E%E5%BF%B5/">
+                            经验碎碎念
+                        </a>
+                    </span>    
+                           
+            
+        </div>
+        <div class="post-title">
+            
+            
+                第一个小型项目的感想
+            
+            
+        </div>
+        <span class="post-date">
+            10月 13, 2022
+        </span>
+    </div>
+    <div class="post-img">
+        
+            <img src="/2022/10/13/%E7%AC%AC%E4%B8%80%E4%B8%AA%E5%B0%8F%E5%9E%8B%E9%A1%B9%E7%9B%AE%E7%9A%84%E6%84%9F%E6%83%B3/cover.jpg" alt="featured_image">
+              
+    </div>
+</div>
+    <div class="post-content">
+    <h2 id="心路历程"><a href="#心路历程" class="headerlink" title="心路历程"></a>心路历程</h2><p>趁着学校的专业实践2(最终结果是要交一篇论文)，其实本可以拿之前的课程论文交差了事的，但是想了一下，这也是一个不错的机会，可以让回顾并且总结一下过去所学的知识，并且去尝试将其组装成一个小小的成果出来。</p>
+<p>大概自己一部分是菜再加上人还是略佛，另一部分也是个人在学习知识时总是倾向于深度优先，一个点卡住就会想疯狂搞懂，再加上还有考研的准备，，所以直到现在，补齐基础的进度也还是停留在CS 61B 21sp的过半这个位置吧。但仔细回顾起来，其实学到的已经不少了：线性表以及其基于数组和引用的实现，各类树形结构(并查集、二叉堆、平衡树)以及其基于引用和数组的实现etc。我认为自己能独立地把这些知识的内容从intuition到相互之间的联系再到代码的实现讲个八九不离十(个别特别变态的内容可能要准备下——说的就是你，红黑树！)。</p>
+<p>写过文档码过代码，结合优秀的课程的知识导入结构与体系的建立与梳理，才能让自己去真正地理解并运用所学的内容。</p>
+<p>最开始的时候，我想，要不专业实践2做一个数据结构可视化的项目吧。但是考察了一下，如果简单地取考虑这个项目的需求，那只是调用一下类似于graphviz这种的成熟库以及在此基础上封装api，就能做出个大概来；如果想要相对复杂一些的功能，例如把可视化的实现和具体的语言进行独立，自己做一套简单的，支持循环语句，函数定义和递归调用的语言，然后后台解析用户的指令并生成相应的图形，那就需要编译原理的知识了，但显然对于若干个星期的时间来说，不足以完成这一目标。</p>
+<p>于是我的第一个想法就陷入了，简单的话太简单，难的话又太难的局面。于是我想着，有没有更好的方案，其所需要的知识是我学过的，但是实现起来又需要自身对所学知识的深入理解以及良好的设计和编码风格才能完成的项目——于是，一个简单的KV存储系统便成为了我的考虑目标。用红黑树来作为表结构，B+树作为索引，并且在前台有简单的调度系统，来管理数据的读写和处理以及内存和磁盘的交互，这样，既实现了知识内容是基于所学范围的，同时实现起来又有一定难度的目标。</p>
+<hr>
+<h2 id="结果"><a href="#结果" class="headerlink" title="结果"></a>结果</h2><p>最后时间所限，实现了表和索引结构，以及在纯内存场景下的，数据读写和存储的调度。还差磁盘和内存的交互以及把调度模块进行独立地抽象和模块化。</p>
+<hr>
+<h2 id="心得"><a href="#心得" class="headerlink" title="心得"></a>心得</h2><h3 id="始终要保持对项目整体的把握感"><a href="#始终要保持对项目整体的把握感" class="headerlink" title="始终要保持对项目整体的把握感"></a>始终要保持对项目整体的把握感</h3><p>我认为第一点，也是最重要的一点是，要时刻保持对项目<strong>整体的“把握感”</strong>。这种把握感在于：</p>
+<ul>
+<li>你对项目<strong>整体的构思和设计</strong>是怎样的，它有可能会在不远的未来发生<strong>变动</strong>么？<ul>
+<li>如果会，变动的频繁程度怎么样？</li>
+<li>每次变动涉及到的变化量，你的预估是多少？</li>
+<li>以及对应地，你该如何进行复杂度的管理？</li>
+</ul>
+</li>
+<li>你<strong>当前</strong>的工作处于项目整体的什么<strong>位置</strong>？<ul>
+<li>你所开发的内容，是为了满足整体中的哪一部分的需求？</li>
+<li>会涉及到哪些组件&#x2F;模块的依赖？</li>
+<li>以及随着你当前的工作，项目整体的架构是否会发生改变？</li>
+</ul>
+</li>
+</ul>
+<p>可以看到，这里有两个不同的抽象层需要兼顾——<strong>整体</strong>以及<strong>局部</strong>。其所处的位置不同，但又相互影响，处理不好的结果，那就是当项目的量级达到一定程度后，再要维护时发现复杂度爆炸。</p>
+<p>除了项目有抽象上的复杂度需要维护，人脑也有自己的复杂度。工作在local和global时，人脑的context是不一样的，当项目整体的规模够大时，每次context switching带来的开销也够咱喝一壶的。</p>
+<p>因此，个人认为，解决之道是在项目开发的时候，documenting的工作也需要实时跟进且不能过于马虎。要做到</p>
+<ol>
+<li>叙述项目<strong>整体</strong>的构建以及主要模块的工作、之间的依赖、以及交互的方式；</li>
+<li><strong>分层记录</strong>开发流程与进度，维护一个进度树。这样工作在local时，记录和维护较低层的进度信息；local工作完成时，返回祖先层更新进度，同时查看接下来的任务以及回溯整体的开发情况；</li>
+<li>在发生重构时(例如在开发子模块时发现可以或需要进行全局性的改动)，也是顺着工作树进行调整；</li>
+</ol>
+<p>这样，整个开发的流程和工作有一个较为系统的组织，也方便管理，可以弥补项目中后期复杂度增加以及人脑上下文切换带来的巨大开销所造成的复杂性的增加。</p>
+
+</div> 
+
+<script>
+    window.onload = detectors();
+</script>
+    <div class="post-footer">
+    <div class="h-line-primary"></div>
+    <nav class="post-nav">
+        <div class="prev-item">
+           
+        </div>
+        <div class="next-item">
+            
+                <div class="icon arrow-right"></div>
+                <div class="post-link">
+                  <a href="/2022/07/23/%E7%BB%A7%E6%89%BF%E7%9A%84%E9%9A%90%E6%82%A3/">Next</a>  
+                </div>  
+            
+        </div>
+    </nav>
+</div>
+
+    
+      <div class="post-comment">
+
+     
+
+    
+        <div id="disqus_thread"></div>
+        <script>
+            /**
+            *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+            *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables    */
+            
+            var disqus_config = function () {
+                this.page.url = 'http://example.com/2022/10/13/%E7%AC%AC%E4%B8%80%E4%B8%AA%E5%B0%8F%E5%9E%8B%E9%A1%B9%E7%9B%AE%E7%9A%84%E6%84%9F%E6%83%B3/';  // Replace PAGE_URL with your page's canonical URL variable
+                this.page.identifier = '2022/10/13/第一个小型项目的感想/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+                this.language = 'zh-CN'
+            };
+            
+            (function() { // DON'T EDIT BELOW THIS LINE
+            var d = document, s = d.createElement('script');
+            s.src = 'https://episode-blog.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>   
+     
+    
+    
+
+</div>
+     
+  
+</article>
+        </div>
+      </div>
+      
+      <div class="footer">
+    <div class="flex-container">
+        <div class="footer-text">
+            
+                Contact Me -&gt; shoinchifu@gmail.com
+                <br>
+            
+            
+                © Episode Zhang | 
+            
+            
+                Powered by <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a> & <a target="_blank" rel="noopener" href="https://github.com/zoeingwingkei/frame/">Frame</a>
+                
+        </div>
+    </div>
+</div>
+
+    </div>
+
+  </body>
+</html>
