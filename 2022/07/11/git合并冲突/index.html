@@ -206,9 +206,9 @@
 <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git add fibonacci.cpp</span><br><span class="line">git commit -m <span class="string">&quot;Implement Fibonacci series evaluation iteratively&quot;</span></span><br></pre></td></tr></table></figure></li>
 </ol>
 <p>于是我现在首先merge了小王的代码，然后git成功把我的“fibonacci.cpp”更新成了小王的递归版(记得我自己默认的分支最开始就是master)：</p>
-<p><img src="/2022/07/11/git%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81/%E6%88%90%E5%8A%9F%E7%9A%84merge.png"></p>
+<p><img src="/2022/07/11/git%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81/%E6%88%90%E5%8A%9F%E7%9A%84merge.png" alt="成功的merge"></p>
 <p>当我看完小王的实现后，觉得没毛病，所以我现在想看小李的实现。于是我把小李的实现merge了进来，git就报出了合并冲突的bug：</p>
-<p><img src="/2022/07/11/git%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81/%E5%86%B2%E7%AA%81%E7%9A%84merge.png"></p>
+<p><img src="/2022/07/11/git%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81/%E5%86%B2%E7%AA%81%E7%9A%84merge.png" alt="冲突的merge"></p>
 <p>造成合并冲突的原因在第一部分已经有讲过了，要合并分支的commit和当前分支所记录的commit里存在对同一位置的不同内容，这个时候git会报出合并冲突并把选择权交给用户。反映到这里，就是小王和小李在“fibonacci.cpp”文件的<code>long long fib(int n)</code>这个函数的实现里选择了不同的方式，让git在合并时感到了“为难”。</p>
 <hr>
 <h2 id="合并冲突问题的解决"><a href="#合并冲突问题的解决" class="headerlink" title="合并冲突问题的解决"></a>合并冲突问题的解决</h2><p>还是第二部分的例子——在合并冲突的文件“fibonacci.cpp”中，我们可以看到git为它生成了一些额外的信息：</p>
@@ -229,7 +229,7 @@
 <p>要解决分支冲突，我们需要对保留当前还是接受merge的内容进行取舍。因为显然小李的实现更加高效，所以我们选择保留小李的实现，并且<strong>删去小王的实现以及git生成的助记符</strong>，然后<strong>进行add与commit</strong>。</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">long</span> <span class="type">long</span> <span class="title">fib</span><span class="params">(<span class="type">int</span> n)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 小李的迭代实现</span></span><br><span class="line">    <span class="type">int</span> a = <span class="number">1</span>, b = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">2</span>; i &lt;= n; i++)</span><br><span class="line">        b = b + a, a = b - a;</span><br><span class="line">    <span class="keyword">return</span> b;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<p><img src="/2022/07/11/git%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81/%E8%A7%A3%E5%86%B3%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81.png"></p>
+<p><img src="/2022/07/11/git%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81/%E8%A7%A3%E5%86%B3%E5%90%88%E5%B9%B6%E5%86%B2%E7%AA%81.png" alt="解决合并冲突"></p>
 <p>如图所示，经过上述的步骤后，我们已经成功解决了合并冲突，并且HEAD指针指向master分支，最近的一次commit显示我们把小李的分支merge进了master分支。</p>
 <p>综上所述，进行分支冲突修复的办法就是：</p>
 <ol>

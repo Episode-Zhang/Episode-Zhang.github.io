@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="Episode Zhang">
+
+
+    <meta name="subtitle" content="世界之底的某处自留地">
+
+
+    <meta name="description" content="记录想记录的一切">
+
+
+
+
+
+<title>记一次容器OOM引起的接口404错误 | Episode Zhang&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/Episode_icon.png">
+
+
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono&display=swap');
+</style>
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/frame.js"></script>
+    
+
+
+
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+
+
+
+
+
+  <!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><meta name="generator" content="Hexo 6.3.0"></head>
+  <body>
+    <div class="mask-border">
+    </div>
+
+    <div class="wrapper">
+
+      <div class="header">
+  <div class="flex-container">
+    <div class="header-inner">
+      <div class="site-brand-container">
+        <a href="/">
+          
+            <img class="logo-img" src="/Episodes_logo.png" alt="logo_image">
+          
+        </a>
+      </div>
+      <div id="menu-btn" class="menu-btn" onclick="toggleMenu()">
+        Menu
+      </div>
+      <nav class="site-nav">
+        <ul class="menu-list">
+          
+            
+              <li class="menu-item">
+                <a href="/">Home</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/categories/blogs/">Blogs</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/archives/">Archive</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/tag/">Tag</a>
+              </li> 
+                   
+          
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main">
+        <div class="flex-container">
+          <article id="post">
+
+  
+    <div class="post-head">
+    <div class="post-info">
+        <div class="tag-list">
+            
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA/">
+                            计算机
+                        </a>
+                    </span>    
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5/">
+                            问题排查
+                        </a>
+                    </span>    
+                           
+            
+        </div>
+        <div class="post-title">
+            
+            
+                记一次容器OOM引起的接口404错误
+            
+            
+        </div>
+        <span class="post-date">
+            2月 16, 2024
+        </span>
+    </div>
+    <div class="post-img">
+        
+            <img src="/2024/02/16/%E8%AE%B0%E4%B8%80%E6%AC%A1%E5%AE%B9%E5%99%A8OOM%E5%BC%95%E8%B5%B7%E7%9A%84%E6%8E%A5%E5%8F%A3404%E9%94%99%E8%AF%AF/banner.png" alt="featured_image">
+              
+    </div>
+</div>
+    <div class="post-content">
+    <h2 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h2><h3 id="1-1-环境"><a href="#1-1-环境" class="headerlink" title="1.1 环境"></a>1.1 环境</h3><p>首先列出系统环境以及相关组件的版本：</p>
+<ul>
+<li>系统：阿里云2C4G轻量应用服务器-ubuntu20.04；</li>
+<li>docker：24.0.5；</li>
+<li>服务：<ul>
+<li>python：3.10；</li>
+<li>python package：<ul>
+<li>sanic&#x3D;&#x3D;22.6.1；</li>
+<li>websockets&#x3D;&#x3D;10.0；</li>
+<li>SpeechRecognition&#x3D;&#x3D;3.10.1；</li>
+<li>requests-toolbelt&#x3D;&#x3D;1.0.0；</li>
+<li>requests&#x3D;&#x3D;2.31.0；</li>
+<li>vosk&#x3D;&#x3D;0.3.45；</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="1-2-业务背景"><a href="#1-2-业务背景" class="headerlink" title="1.2 业务背景"></a>1.2 业务背景</h3><p>业务上预期实现一个“智能问答”的模块，其中包含一项功能：由用户输入语音，将其识别成文字后交给大模型进行处理，最后将用户的语音提问以及大模型输出的回答一并呈现在前端对话框。</p>
+<p>该项目的后端服务基于python，而本人被分配到的任务则是基于vosk的中文语音识别模型以及SpeechRecognition包和sanic框架来实现“<strong>用户输入的语音到对应文字的识别</strong>”的<strong>web接口</strong>。对于该接口，其路径为<code>/api/audio/convert</code>，预期从请求的body体中读取wav格式的音频字节流，并返回识别后的中文文本。</p>
+<p>在本地进行开发时，本人采用的前后端通信的架构如下：</p>
+<ol>
+<li>前端所有的api请求会先发送到nginx网关上，对应本机端口8080；</li>
+<li>在nginx网关中设置路由规则，然后将前端的请求转发到实际处理的后端服务对应的端口8091上；</li>
+<li>后端服务采用docker容器进行部署，后端服务在容器内的进程端口映射到本机的8091端口上；</li>
+</ol>
+<p>即简单的“前端-网关-后端”的这样一个单体应用的架构。</p>
+<h3 id="1-3-问题"><a href="#1-3-问题" class="headerlink" title="1.3 问题"></a>1.3 问题</h3><p>在基于1.2的业务背景的基础上，遇到的问题可以整理为：</p>
+<ol>
+<li>前端调用测试接口<code>/test</code>时，得到预期结果；</li>
+<li>录入语音并调用<code>/api/audio/convert</code>接口时，在接口等待一段时间后返回错误码404；</li>
+<li>跳过网关，直接请求接口<code>/test</code>与<code>/api/audio/convert</code>，返回错误码502；</li>
+</ol>
+<hr>
+<h2 id="2-排查过程"><a href="#2-排查过程" class="headerlink" title="2. 排查过程"></a>2. 排查过程</h2><p>遇到这类问题，笔者本人最先考虑的是首先是前端发起的请求能否正常到达服务，其次是是否服务本身出现了问题，所以沿着这个思路，笔者先做了以下的排查工作：</p>
+<ol>
+<li><p>首先查看网关是否能够正常接收前端发起的请求：</p>
+<p>查看nginx的<code>access.log</code>与<code>error.log</code>，发现nginx能够正常接收前端发起的请求；</p>
+</li>
+<li><p>查看容器是否正常运行：</p>
+<p><code>docker ps</code>查看docker容器运行情况，发现容器正常运行；</p>
+</li>
+<li><p>查看容器内服务是否正常运行：</p>
+<p><code>docker logs</code>查看docker容器中的服务日志，发现日志<strong>打印了一部分</strong>收到请求后预期打印的内容，同时日志并未打印任何程序异常；</p>
+</li>
+</ol>
+<p>检查到这里，可以首先确认容器正常运行，同时前端的请求的确到达了网关，并由网关正确地转发到了相应的后端服务上，后端服务接收到请求后执行了<strong>部分</strong>相应的处理逻辑，但并没有走完全程。这中间应该是发生了<strong>异常的退出</strong>，但却<strong>没有被</strong>业务逻辑以及web框架自身<strong>捕捉到</strong>这个发生的异常。再结合请求这个<code>/api/audio/convert</code>接口时<strong>产生了较长的等待</strong>，于是考虑是否存在<strong>机器资源耗尽</strong>从而导致请求失败的可能性。</p>
+<p>于是到阿里云的控制面板里查看监控，发现在接口请求期间，机器出现：</p>
+<ol>
+<li><strong>内存</strong>发生了<strong>断崖式地下降</strong>；</li>
+<li>磁盘高频读；</li>
+</ol>
+<p>如图：</p>
+<p><img src="/2024/02/16/%E8%AE%B0%E4%B8%80%E6%AC%A1%E5%AE%B9%E5%99%A8OOM%E5%BC%95%E8%B5%B7%E7%9A%84%E6%8E%A5%E5%8F%A3404%E9%94%99%E8%AF%AF/%E9%98%BF%E9%87%8C%E4%BA%91%E7%B3%BB%E7%BB%9F%E7%9B%91%E6%8E%A7.png" alt="阿里云系统监控"></p>
+<p>结合先前对容器服务产生“异常退出”的可能性的判断，高度考虑服务进程大量占用内存，系统内存耗尽导致<strong>对应的进程被内核OOM kill掉</strong>，所以整个服务挂掉，为接口调用失败的原因。</p>
+<p>为了验证猜测，首先重启容器，并且重复先前的操作，使用<code>top</code>命令以及<code>free -h</code>命令观察对应进程的资源占用：</p>
+<p><img src="/2024/02/16/%E8%AE%B0%E4%B8%80%E6%AC%A1%E5%AE%B9%E5%99%A8OOM%E5%BC%95%E8%B5%B7%E7%9A%84%E6%8E%A5%E5%8F%A3404%E9%94%99%E8%AF%AF/%E7%B3%BB%E7%BB%9F%E8%B5%84%E6%BA%90%E4%BD%BF%E7%94%A8%E7%9B%91%E6%8E%A7.png" alt="系统资源使用监控"></p>
+<p>发现后端的服务进程确实产生了大量的内存占用，最后使用<code>dmesg -T</code>命令，查看是否真的产生了系统级的OOM，发现的确发生了OOM，如图：</p>
+<p><img src="/2024/02/16/%E8%AE%B0%E4%B8%80%E6%AC%A1%E5%AE%B9%E5%99%A8OOM%E5%BC%95%E8%B5%B7%E7%9A%84%E6%8E%A5%E5%8F%A3404%E9%94%99%E8%AF%AF/%E5%86%85%E6%A0%B8%E6%97%A5%E5%BF%97.png" alt="内核日志">至此，我们可以说OOM是板上钉钉，证据确凿的事情了——也就是说</p>
+<blockquote>
+<p>我们后端的<strong>服务在运行期间占用了大量的内存，导致系统oom，进程被干掉导致服务挂掉，从而导致接口报错</strong>。</p>
+</blockquote>
+<p>这里面比较有意思的是，具体执行任务的进程是对应docker容器进程的<strong>孙辈进程</strong>，因而该进程被oom kill掉后不会影响容器进程的运行，所以查看容器运行状态时，可以看到容器运行正常。、</p>
+<p>最后，发现是python服务调用的模型自身文件有2.1个G的大小，机器本身仅有4g的内存，因此将其从磁盘上读入内存时，容易造成机器内存耗尽的问题。最后换了一个轻量级的，60多M的模型，之后接口就正常工作了。</p>
+<hr>
+<h2 id="3-结论与收获"><a href="#3-结论与收获" class="headerlink" title="3. 结论与收获"></a>3. 结论与收获</h2><p>这是一个非常典型的因为资源耗尽导致系统oom kill掉服务进程，从而导致整个服务挂掉，接口调用失败的案例。排查这类问题首先要做好的就是<strong>各级各层的日志与监控</strong>需要具备(系统的<strong>可观测性</strong>)，这样才可以逐步缩小问题范围；同时对排查的问题范围要有敏感度，接口调用失败有可能是<strong>接口本身不够健壮</strong>，运行过程中产生了异常，也有可能是<strong>系统层面</strong>的问题，如进程导致系统资源耗尽从而被内核kill掉——而前者一般是可以通过服务应用的日志观察到的，后者需要进一步借助系统层面的观测。</p>
+<p>从具体的“术”的层面，大致学习到了：</p>
+<ol>
+<li><code>top -p</code>命令查看具体进程的系统资源占用；</li>
+<li><code>free</code>命令查看系统内存的使用情况，本文中使用<code>free -h</code>命令；</li>
+<li><code>dmesg</code>命令可以查看系统内核日志，本文中使用<code>dmesg -T</code>命令；</li>
+</ol>
+<hr>
+<h2 id="4-延伸与思考"><a href="#4-延伸与思考" class="headerlink" title="*4. 延伸与思考"></a>*4. 延伸与思考</h2><p>笔者认为，从这篇文章出发，顺带着延伸开来，也可以试着学习和思考一下以下几个问题：</p>
+<ul>
+<li><p>docker的虚拟化的机制是怎么样的？</p>
+<p>为什么用<code>ps -ef</code>命令查看的时候，显示的是：docker容器一个进程A，容器内image写Dockerfile时run的<code>python src/main.py</code>一个进程B，最后调用的python是宿主机上的<code>/usr/local/bin/python</code>，这个python对应的一个进程<code>/usr/local/bin/python src/main.py</code>C，并且ABC的关系是：A为B父，B为C父；</p>
+</li>
+<li><p>对于更加复杂的微服务架构以及分布式系统，这样的系统的可观测性有没有什么实践案例，是怎么设计和做的？</p>
+</li>
+<li><p>这里的解决方法是采用更轻量的模型，部分也是受制于笔者本人对本地开发环境的预算以及公司基建的不成熟，假如服务器资源更充足，要求在不降低模型质量的前提下，对应的解决方法又该如何设计和实现？</p>
+</li>
+</ul>
+
+</div> 
+
+<script>
+    window.onload = detectors();
+</script>
+    <div class="post-footer">
+    <div class="h-line-primary"></div>
+    <nav class="post-nav">
+        <div class="prev-item">
+           
+        </div>
+        <div class="next-item">
+            
+                <div class="icon arrow-right"></div>
+                <div class="post-link">
+                  <a href="/2024/01/02/2023%E5%B9%B4%E7%BB%88%E6%80%BB%E7%BB%93/">Next</a>  
+                </div>  
+            
+        </div>
+    </nav>
+</div>
+
+    
+      <div class="post-comment">
+
+     
+
+    
+        <div id="disqus_thread"></div>
+        <script>
+            /**
+            *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+            *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables    */
+            
+            var disqus_config = function () {
+                this.page.url = 'http://example.com/2024/02/16/%E8%AE%B0%E4%B8%80%E6%AC%A1%E5%AE%B9%E5%99%A8OOM%E5%BC%95%E8%B5%B7%E7%9A%84%E6%8E%A5%E5%8F%A3404%E9%94%99%E8%AF%AF/';  // Replace PAGE_URL with your page's canonical URL variable
+                this.page.identifier = '2024/02/16/记一次容器OOM引起的接口404错误/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+                this.language = 'zh-CN'
+            };
+            
+            (function() { // DON'T EDIT BELOW THIS LINE
+            var d = document, s = d.createElement('script');
+            s.src = 'https://episode-blog.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>   
+     
+    
+    
+
+</div>
+     
+  
+</article>
+        </div>
+      </div>
+      
+      <div class="footer">
+    <div class="flex-container">
+        <div class="footer-text">
+            
+                Contact Me -&gt; shoinchifu@gmail.com
+                <br>
+            
+            
+                © Episode Zhang | 
+            
+            
+                Powered by <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a> & <a target="_blank" rel="noopener" href="https://github.com/zoeingwingkei/frame/">Frame</a>
+                
+        </div>
+    </div>
+</div>
+
+    </div>
+
+  </body>
+</html>
