@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="Episode Zhang">
+
+
+    <meta name="subtitle" content="世界之底的某处自留地">
+
+
+    <meta name="description" content="记录想记录的一切">
+
+
+
+
+
+<title>记一次生产环境下的Full GC导致的服务假死 | Episode Zhang&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/Episode_icon.png">
+
+
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono&display=swap');
+</style>
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/frame.js"></script>
+    
+
+
+
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+
+
+
+
+
+  <!-- hexo injector head_end start -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/hexo-math@4.0.0/dist/style.css">
+<!-- hexo injector head_end end --><meta name="generator" content="Hexo 6.3.0"></head>
+  <body>
+    <div class="mask-border">
+    </div>
+
+    <div class="wrapper">
+
+      <div class="header">
+  <div class="flex-container">
+    <div class="header-inner">
+      <div class="site-brand-container">
+        <a href="/">
+          
+            <img class="logo-img" src="/Episodes_logo.png" alt="logo_image">
+          
+        </a>
+      </div>
+      <div id="menu-btn" class="menu-btn" onclick="toggleMenu()">
+        Menu
+      </div>
+      <nav class="site-nav">
+        <ul class="menu-list">
+          
+            
+              <li class="menu-item">
+                <a href="/">Home</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/categories/blogs/">Blogs</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/archives/">Archive</a>
+              </li> 
+                   
+          
+            
+              <li class="menu-item">
+                <a href="/tag/">Tag</a>
+              </li> 
+                   
+          
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main">
+        <div class="flex-container">
+          <article id="post">
+
+  
+    <div class="post-head">
+    <div class="post-info">
+        <div class="tag-list">
+            
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E8%AE%A1%E7%AE%97%E6%9C%BA/">
+                            计算机
+                        </a>
+                    </span>    
+                
+                    <span class="post-tag">
+                        <a href="/tags/%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5/">
+                            问题排查
+                        </a>
+                    </span>    
+                           
+            
+        </div>
+        <div class="post-title">
+            
+            
+                记一次生产环境下的Full GC导致的服务假死
+            
+            
+        </div>
+        <span class="post-date">
+            6月 30, 2024
+        </span>
+    </div>
+    <div class="post-img">
+        
+            <img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/logoimage.png" alt="featured_image">
+              
+    </div>
+</div>
+    <div class="post-content">
+    <h2 id="1-背景"><a href="#1-背景" class="headerlink" title="1. 背景"></a>1. 背景</h2><p>上周五下午15:20分左右的时候，接到用户的反馈说系统进不去。在访问了网站的线上地址后，我发现UI正常渲染，但是所有的接口都报502错误，于是考虑后端服务出现了问题。访问了Grafana监控后，发现后端的服务正常存活，但是出现了Full GC次数变多以及老年代的GC时长飙高的情况：</p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/gc%E6%8C%87%E6%A0%87.jpg"></p>
+<p>客户反馈因为周五是系统上报的截止日期，所以存在短期内流量较大的情况。为了尽可能最快地恢复系统并保证服务的可用性，我选择了临时重启服务。在服务重启完毕后，接口恢复正常并持续工作了一段时间。但是在下午15:40左右，又接到了部分用户对系统不可用的反馈。在与客户协商并取得同意后，我选择临时关闭了生产环境机器上的一些次要服务来为当前服务腾出资源，同时去调高分配给当前服务的最大堆内存的大小以及新生代区的大小，启用了G1垃圾回收器，最后保障了此后服务的可用性。</p>
+<p>由于造成服务假死的原因有很多，所以需要进一步地梳理和复盘才能确认出服务不可用的原因。下面的“复盘”环节将给出各个时间节点系统的一些指标的情况并结合相对应的表现去试图还原系统走向假死的这一个过程。</p>
+<hr>
+<h2 id="2-复盘"><a href="#2-复盘" class="headerlink" title="2. 复盘"></a>2. 复盘</h2><p>通过抓取和分析当天的系统与服务的指标，以及相对应的系统外在的表现，按照时间顺序可以罗列出以下的几个重要时间点：</p>
+<ol>
+<li><p>下午15:05分左右出现了JVM线程数的一个峰值，峰值时JVM线程数达到2.6K的一个量级；</p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/jvm%E7%BA%BF%E7%A8%8B%E6%95%B01505.png"></p>
+</li>
+<li><p>下午15:10分左右，老年代内存接近占满，然后开始频繁触发Full GC，同时Full GC的时长也开始增加，15:10分左右的一次标记清除算法耗时达到了507毫秒；</p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/%E8%80%81%E5%B9%B4%E4%BB%A3%E7%A9%BA%E9%97%B4.png"></p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/gc%E6%97%B6%E9%95%BF.png"></p>
+</li>
+<li><p>与此同时系统CPU使用率开始飙高，从平时峰值10%多变成了40%多(时间用的UTC+0所以差8个小时)；</p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/cpu%E4%BD%BF%E7%94%A8%E7%8E%87.png"></p>
+</li>
+<li><p>下午15:22分接到用户反馈，称系统无法正常使用，核实后发现系统接口均报502错误；</p>
+</li>
+<li><p>下午15:25分完成系统的第一次重启，重启后接口正常工作；</p>
+</li>
+<li><p>下午15:40分左右系统又出现了JVM线程数的新峰值，量级在2.8k，同时接到部分用户反馈系统不可用的情况；</p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/jvm%E7%BA%BF%E7%A8%8B%E6%95%B01540.png"></p>
+</li>
+<li><p>下午16:03分，关闭了生产机节点上的次要服务，同时调整服务的启动参数，完成了系统的第二次重启，此次重启后系统没有再发生不可用的情况；</p>
+</li>
+</ol>
+<p>最后解决问题的思路整体上遵循“临时扩容”的办法，将分配给Java服务的资源调大后问题就没有再出现了——而原先该服务的Java进程的启动参数中，分配给该服务的最大堆内存为1024M。这说明我们系统不可用的原因定位到的位置是<strong>应用层</strong>，发生的问题可以归纳为<strong>资源耗尽</strong>。同时，在事后排查接口访问与耗时这一块相关的数据时，我们发现出现服务不可用的时候系统的<strong>QPS并不高</strong>（只有个位数），同时系统的用户服务的接口中，有三个接口的耗时均达到了<strong>5s以上</strong>：</p>
+<ul>
+<li><code>sysUser/listByUser</code>：平均耗时11.2s</li>
+<li><code>sysUser/list</code>：平均耗时6.82s</li>
+<li><code>sysUser/listByOrganization</code>：平均耗时5.67s</li>
+</ul>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/%E6%8E%A5%E5%8F%A3rt-%E4%BC%98%E5%8C%96%E5%89%8D.png"></p>
+<p>因此，当时系统的情况可以概括为：系统的JVM线程数飙高，堆内存耗尽，频繁Full GC的同时QPS并不高。推测原因是这些慢调用在系统流量较大时，将大量的线程阻塞住，导致一方面老的请求尚在处理，新的请求过来后，SpringBoot内置的Tomcat容器不得不启动新的线程去处理请求，新的请求进来的速度远高于已有请求的处理速度，最后资源耗尽，最终服务不可用。</p>
+<hr>
+<h2 id="3-几个接口为什么慢"><a href="#3-几个接口为什么慢" class="headerlink" title="3. 几个接口为什么慢"></a>3. 几个接口为什么慢</h2><p>既然我们定位到了接口的慢调用导致了流量较大时系统大量线程被阻塞，就需要去查看相关的代码，做了哪些操作可能引起如此高的耗时。</p>
+<p>以<code>listByUser</code>为例，我们排查这个接口的实现逻辑后，最终定位到这样一处for循环：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (UserOrganizationRelation userOrganizationRelation : sysUserList) &#123;</span><br><span class="line">    <span class="type">String</span> <span class="variable">userInfo</span> <span class="operator">=</span> SzsnApiUtil.getUserInfo(userOrganizationRelation.getUserId(), request);</span><br><span class="line">    <span class="type">JSONObject</span> <span class="variable">jsonObject1</span> <span class="operator">=</span> (JSONObject) JSONObject.parse(userInfo);</span><br><span class="line">    <span class="type">Integer</span> <span class="variable">code</span> <span class="operator">=</span> (Integer) jsonObject1.get(<span class="string">&quot;code&quot;</span>);</span><br><span class="line">    <span class="keyword">if</span> (code.equals(<span class="number">200</span>)) &#123;</span><br><span class="line">        <span class="type">JSONObject</span> <span class="variable">dt</span> <span class="operator">=</span> (JSONObject) jsonObject1.get(<span class="string">&quot;data&quot;</span>);</span><br><span class="line">        <span class="type">JSONObject</span> <span class="variable">user</span> <span class="operator">=</span> (JSONObject) dt.get(<span class="string">&quot;user&quot;</span>);</span><br><span class="line">        <span class="keyword">if</span> (user != <span class="literal">null</span> &amp;&amp; !StringUtils.isBlank(user.get(<span class="string">&quot;nickName&quot;</span>).toString())) &#123;</span><br><span class="line">            userOrganizationRelation.setUserName((String) user.get(<span class="string">&quot;nickName&quot;</span>));</span><br><span class="line">            userOrganizationRelation.setPhoneNumber((String) user.get(<span class="string">&quot;phonenumber&quot;</span>));</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里的<code>sysUserList</code>是根据事先传入的角色参数查到的对应角色下的所有用户的<code>user_id</code>组成的一个entity列表。在for循环内部，代码其实就是做了两件事：</p>
+<ol>
+<li>获取<code>String</code>类型的<code>userInfo</code>变量；</li>
+<li>解析<code>String</code>类型的<code>userInfo</code>变量，并将解析出来的属性赋给<code>sysUserList</code>中的实体；</li>
+</ol>
+<p>这里的<code>userInfo</code>的获取调用了一个叫<code>SzsnApiUtil</code>的静态方法，结合类名以及拿到<code>userInfo</code>并转换成<code>JSONObject</code>(实际上就是在做反序列化)的行为且根据<code>code</code>属性是否等于200来做后续的逻辑来看，<strong>大概率</strong>获取<code>userInfo</code>的过程就是一次<strong>远程调用</strong>的过程。只不过这个远程调用我们实现稍微封装了一下。如果可以验证<code>SzsnApiUtil.getUserInfo</code>方法内部就是一个远程调用用户服务的接口，那么我们等于是在<strong>for循环内去执行远程调用</strong>，那么接口耗时如此之高，能达到10s以上，也就解释得通了。最后，在查看<code>SzsnApiUtil.getUserInfo</code>的内部实现逻辑后，我们发现该方法就是一次裸的远程调用。</p>
+<p>同样的道理，在查看了另外两个耗时较高的接口的内部实现逻辑后，也发现了for循环内执行远程调用的情况，这也就能解释得通为何这三个接口的平均耗时如此之高。</p>
+<hr>
+<h2 id="4-优化接口性能"><a href="#4-优化接口性能" class="headerlink" title="4. 优化接口性能"></a>4. 优化接口性能</h2><p>我们知道，计算机在访问存储的时候是按照“由近及远”的方式的，越是近的，读取的速度就越快。从CPU内的寄存器里读取一次数据，在现代CPU上可以在不到1纳秒之内完成(1个时钟周期)，而从CPU的L3 Cache读取一次数据，再到RAM中读取一次数据，在现代硬件上耗时也都是纳秒级的；但是如果需要从硬盘上读取数据，哪怕是SSD，耗时都起码在微秒级；如果涉及到网络I&#x2F;O，那么耗时从毫秒到秒就不等了。可想而知，在for循环里发起网络调用，将会给系统带来多大的负担。一旦遇到突发的流量，并发数稍稍高于平时，这些慢调用就可以把本来可以用于处理外部请求的线程阻塞在I&#x2F;O上，进而导致可用线程大大减少，JVM不得不创建更多的线程来处理请求。而线程的创建，对象的创建都是有开销的，只限定1个G的堆内存，外面还有流量进来，里面的线程还在被慢调用独占，一来一去，服务最终资源耗尽，出现了假死。</p>
+<p>仔细分析这个场景，其实我们不难想出一种合理且简便的优化方法——用户数据是一个典型的“读多写少”的数据，我们访问系统的服务时，经常需要查询用户数据，但是往往我们修改用户数据的次数远小于读取的次数，一个用户可能每天都会访问系统，但很少说用户每天都要修改用户信息。因此，针对这一种<strong>读多写少</strong>、且本身为<strong>热点数据</strong>需要被系统大量其它服务访问、且I&#x2F;O方式都是通过<strong>网络调用</strong>来实现的数据，我们完全可以引入<strong>缓存</strong>去做数据读写的优化。</p>
+<p>例如，我们在读取用户信息时，首先从缓存中查找数据，如果缓存命中，我们直接返回缓存中的数据；如果缓存未命中，我们发起一起网络调用来获取用户信息，同时将获取到的信息写入缓存，方便下次查询时直接返回。在后端服务中，缓存常用的选型有远程缓存Redis&#x2F;Memcached，以及本地缓存例如Guava缓存甚至Java内置的Map。这里选用Redis来作为缓存，毕竟Redis操作简单、效率好且提供了很多开箱即用的功能，不占用Java服务的内存，如果将来服务做多实例也无需进行大量相关的改造。</p>
+<p>改造后的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (redisUtil == <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="comment">// 该方法内部加了互斥锁用于保证仅初始化一次</span></span><br><span class="line">    initRedisUtil();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 设置缓存过期时间为15分钟</span></span><br><span class="line"><span class="type">long</span> <span class="variable">expireTime</span> <span class="operator">=</span> <span class="number">15</span> * <span class="number">60</span>;</span><br><span class="line"><span class="comment">// 查询缓存</span></span><br><span class="line"><span class="type">String</span> <span class="variable">key</span> <span class="operator">=</span> String.format(<span class="string">&quot;getUserInfo-%s&quot;</span>, userId);</span><br><span class="line"><span class="type">String</span> <span class="variable">userInfo</span> <span class="operator">=</span> (String) redisUtil.get(key);</span><br><span class="line">log.info(<span class="string">&quot;getUserInfo: 查询用户&#123;&#125;命中缓存！&quot;</span>, userId);</span><br><span class="line"><span class="comment">// 如果缓存不存在, 则调用远程接口, 然后写缓存</span></span><br><span class="line"><span class="keyword">if</span> (userInfo == <span class="literal">null</span>) &#123;</span><br><span class="line">    Map&lt;String, Object&gt; map = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">    map.put(<span class="string">&quot;userId&quot;</span>, userId);</span><br><span class="line">    <span class="comment">// callStr内部封装了http请求过程，调用的接口地址做了脱敏</span></span><br><span class="line">    userInfo = callStr(<span class="string">&quot;/user-service/api/v1/user/get&quot;</span>, <span class="string">&quot;POST&quot;</span>, map, request);</span><br><span class="line">    redisUtil.set(key, userInfo, expireTime);</span><br><span class="line">    log.info(<span class="string">&quot;getUserInfo: 查询用户&#123;&#125;缓存未命中, 已写入重新写入缓存！&quot;</span>, userId);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">return</span> userInfo;</span><br></pre></td></tr></table></figure>
+
+<p>这里将缓存时间设置成了15分钟，主要是考虑了在突发流量的情况下，15分钟的窗口就能避免相当多的请求去走远程调用；如果流量不密集，两次请求时间超过15分钟，那么即便缓存过期了，系统内还是有充足的线程余量来处理请求。但这样做也带来了数据不一致的风险，假设用户在15分钟的窗口内修改了用户数据，那么用户服务是不会同步写Redis的，此时用户再访问系统拿到的就是旧的数据。针对这种情况，我留了一个后门接口来删除Redis内所有保存的用户信息的缓存来做兜底。</p>
+<p>接口优化后，依赖于这个<code>SzsnApiUtil.getUserInfo</code>的三个接口耗时基本有两倍以上的提升(相同的时间下同一接口调用次数至少是之前的2倍)，以上周六到当前为止作为时间窗口来检查接口调用耗时：</p>
+<p><img src="/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/%E6%8E%A5%E5%8F%A3rt-%E4%BC%98%E5%8C%96%E5%90%8E.png"></p>
+<p>优化完成后，这周一下午四点到五点之间也有一波短暂的流量峰值，这一次系统完全能够正常工作。</p>
+<p>除了接口优化以外，考虑到内存管理上尽量避免产生过多的碎片影响大对象的分配和保存，项目的服务是基于JDK 8的，因此后续还将JVM的GC收集器从CMS收集器换成了G1收集器。</p>
+
+</div> 
+
+<script>
+    window.onload = detectors();
+</script>
+    <div class="post-footer">
+    <div class="h-line-primary"></div>
+    <nav class="post-nav">
+        <div class="prev-item">
+           
+        </div>
+        <div class="next-item">
+            
+                <div class="icon arrow-right"></div>
+                <div class="post-link">
+                  <a href="/2024/02/16/%E8%AE%B0%E4%B8%80%E6%AC%A1%E5%AE%B9%E5%99%A8OOM%E5%BC%95%E8%B5%B7%E7%9A%84%E6%8E%A5%E5%8F%A3404%E9%94%99%E8%AF%AF/">Next</a>  
+                </div>  
+            
+        </div>
+    </nav>
+</div>
+
+    
+      <div class="post-comment">
+
+     
+
+    
+        <div id="disqus_thread"></div>
+        <script>
+            /**
+            *  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+            *  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables    */
+            
+            var disqus_config = function () {
+                this.page.url = 'http://example.com/2024/06/30/%E8%AE%B0%E4%B8%80%E6%AC%A1%E7%94%9F%E4%BA%A7%E7%8E%AF%E5%A2%83%E4%B8%8B%E7%9A%84Full-GC%E5%AF%BC%E8%87%B4%E7%9A%84%E6%9C%8D%E5%8A%A1%E5%81%87%E6%AD%BB/';  // Replace PAGE_URL with your page's canonical URL variable
+                this.page.identifier = '2024/06/30/记一次生产环境下的Full-GC导致的服务假死/'; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+                this.language = 'zh-CN'
+            };
+            
+            (function() { // DON'T EDIT BELOW THIS LINE
+            var d = document, s = d.createElement('script');
+            s.src = 'https://episode-blog.disqus.com/embed.js';
+            s.setAttribute('data-timestamp', +new Date());
+            (d.head || d.body).appendChild(s);
+            })();
+        </script>
+        <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>   
+     
+    
+    
+
+</div>
+     
+  
+</article>
+        </div>
+      </div>
+      
+      <div class="footer">
+    <div class="flex-container">
+        <div class="footer-text">
+            
+                Contact Me -&gt; shoinchifu@gmail.com
+                <br>
+            
+            
+                © Episode Zhang | 
+            
+            
+                Powered by <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a> & <a target="_blank" rel="noopener" href="https://github.com/zoeingwingkei/frame/">Frame</a>
+                
+        </div>
+    </div>
+</div>
+
+    </div>
+
+  </body>
+</html>
